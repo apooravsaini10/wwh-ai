@@ -1,0 +1,113 @@
+# Query: # Validation memory — stores every prediction and outcome\nvalidation_memory = []
+# ContextLines: 1
+
+1 result - 1 file
+
+~/wwh_ai/wwh_ai.py:
+  135  # ─────────────────────────────────────────
+# PERSISTENT MEMORY — NEO4J
+# Everything the AI learns is stored here
+# permanently — even after closing
+# ─────────────────────────────────────────
+
+from neo4j import GraphDatabase
+
+class WWHMemory:
+    def __init__(self):
+        self.driver = GraphDatabase.driver(
+            'bolt://localhost:7687',
+            auth=('neo4j', 'wwhai123')
+        )
+        self.setup_identity()
+        console.print("[bold green]Persistent memory connected![/bold green]")
+
+    def close(self):
+        self.driver.close()
+
+    def setup_identity(self):
+        """Store WWH identity permanently in graph"""
+        with self.driver.session() as session:
+            session.run("""
+                MERGE (ai:Identity {name: 'WWH'})
+                SET ai.what = $what,
+                    ai.why = $why,
+                    ai.how = $how,
+                    ai.created = $created
+            """, {
+                "what": WWH_IDENTITY["what"],
+                "why": WWH_IDENTITY["why"],
+                "how": WWH_IDENTITY["how"],
+                "created": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            })
+
+    def store_interaction(self, query, intent, wwh_response, validation_score):
+        """Store every interaction as a WWH node in the graph"""
+        with self.driver.session() as session:
+            session.run("""
+                CREATE (i:Interaction {
+                    query: $query,
+                    intent: $intent,
+                    response: $response,
+                    validation_score: $score,
+                    timestamp: $timestamp
+                })
+                WITH i
+                MATCH (ai:Identity {name: 'WWH'})
+                CREATE (ai)-[:LEARNED]->(i)
+            """, {
+                "query": query,
+                "intent": intent,
+                "response": wwh_response,
+                "score": validation_score,
+                "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            })
+
+    def store_learning(self, query, learning):
+        """Store what the AI learned from validation"""
+        with self.driver.session() as session:
+            session.run("""
+                MERGE (l:Learning {query: $query})
+                SET l.learning = $learning,
+                    l.timestamp = $timestamp
+                WITH l
+                MATCH (ai:Identity {name: 'WWH'})
+                MERGE (ai)-[:KNOWS]->(l)
+            """, {
+                "query": query,
+                "learning": learning,
+                "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            })
+
+    def get_all_learnings(self):
+        """Retrieve everything the AI has learned"""
+        with self.driver.session() as session:
+            result = session.run("""
+                MATCH (ai:Identity {name: 'WWH'})-[:KNOWS]->(l:Learning)
+                RETURN l.query as query, l.learning as learning, l.timestamp as timestamp
+                ORDER BY l.timestamp DESC
+            """)
+            return [record for record in result]
+
+    def get_total_interactions(self):
+        """Get total number of interactions"""
+        with self.driver.session() as session:
+            result = session.run("""
+                MATCH (ai:Identity {name: 'WWH'})-[:LEARNED]->(i:Interaction)
+                RETURN count(i) as total
+            """)
+            return result.single()["total"]
+
+    def recall_similar(self, query):
+        """Find similar past interactions"""
+        with self.driver.session() as session:
+            result = session.run("""
+                MATCH (ai:Identity {name: 'WWH'})-[:LEARNED]->(i:Interaction)
+                WHERE toLower(i.query) CONTAINS toLower($keyword)
+                RETURN i.query as query, i.intent as intent, i.validation_score as score
+                ORDER BY i.timestamp DESC
+                LIMIT 3
+            """, {"keyword": query.split()[0] if query.split() else query})
+            return [record for record in result]
+  136: # Validation memory — stores every prediction and outcome
+  137: validation_memory = []
+  138  

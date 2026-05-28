@@ -1,0 +1,88 @@
+# Query: # ─────────────────────────────────────────\n# MEMORY RECALL — checks past learnings
+# ContextLines: 1
+
+1 result - 1 file
+
+~/wwh_ai/wwh_ai.py:
+  279  # ─────────────────────────────────────────
+# STAGE 3 — AUTONOMOUS LEARNING
+# AI finds its own gaps and fills them
+# without being asked
+# ─────────────────────────────────────────
+
+def find_knowledge_gaps(memory):
+    """Find topics where AI scored poorly or hasn't explored deeply"""
+    try:
+        with memory.driver.session() as session:
+            # Find low scoring interactions
+            result = session.run("""
+                MATCH (ai:Identity {name: 'WWH'})-[:LEARNED]->(i:Interaction)
+                WHERE i.validation_score < 75
+                RETURN i.query as query, i.validation_score as score
+                ORDER BY i.validation_score ASC
+                LIMIT 5
+            """)
+            gaps = [{"query": r['query'], "score": r['score']} for r in result]
+            return gaps
+    except:
+        return []
+
+def generate_self_question(gap, memory):
+    """AI generates its own deeper question based on a knowledge gap"""
+    prompt = f"""
+You are WWH AI. You previously answered this question but scored only {gap['score']}/100:
+"{gap['query']}"
+
+Generate ONE deeper follow-up question that would help you understand this topic better.
+The question should address what you likely got wrong or missed.
+Respond with ONLY the question, nothing else.
+"""
+    response = client.chat.completions.create(
+        model="llama-3.3-70b-versatile",
+        messages=[{"role": "user", "content": prompt}],
+        temperature=0.7,
+        max_tokens=100
+    )
+    return response.choices[0].message.content.strip()
+
+def autonomous_learn(memory, cycles=3):
+    """Stage 3 — AI learns on its own for a number of cycles"""
+    console.print(Panel.fit(
+        f"[bold blue]Starting autonomous learning — {cycles} cycles[/bold blue]\n"
+        f"[white]AI will find its own gaps and fill them.[/white]",
+        title="[bold white]STAGE 3 — AUTONOMOUS LEARNING[/bold white]",
+        border_style="blue"
+    ))
+    
+    for cycle in range(cycles):
+        console.print(f"\n[bold blue]Cycle {cycle + 1} of {cycles}[/bold blue]")
+        
+        # Step 1 — Find knowledge gaps
+        gaps = find_knowledge_gaps(memory)
+        
+        if not gaps:
+            console.print("[bold yellow]No knowledge gaps found — AI knowledge is strong.[/bold yellow]")
+            break
+        
+        # Pick the weakest gap
+        gap = gaps[0]
+        console.print(f"[bold red]Gap found:[/bold red] '{gap['query']}' — Score: {gap['score']}")
+        
+        # Step 2 — Generate self question
+        self_question = generate_self_question(gap, memory)
+        console.print(f"[bold yellow]Self generated question:[/bold yellow] {self_question}")
+        
+        # Step 3 — Answer using WWH thinking
+        console.print("[bold yellow]Thinking...[/bold yellow]")
+        response, _ = wwh_think(self_question, [])
+        display_response(response)
+        
+        # Step 4 — Validate
+        validation = validate_answer(self_question, response)
+        display_validation(validation)
+        
+        # Step 5 — Extract score and learning
+        
+  280: # ─────────────────────────────────────────
+  281: # MEMORY RECALL — checks past learnings
+  282  # before answering anything new
