@@ -1,0 +1,635 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>WWH AI — Live Demo</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: #060D1F;
+    color: #ffffff;
+    font-family: 'Segoe UI', Arial, sans-serif;
+    min-height: 100vh;
+  }
+
+  /* ── Header ── */
+  #header {
+    background: linear-gradient(135deg, #0D1B3E, #1B3A7A);
+    padding: 16px 40px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 2px solid #1B3A7A;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
+
+  #header h1 {
+    font-size: 24px;
+    font-weight: 900;
+    color: #4A90D9;
+    letter-spacing: 4px;
+  }
+
+  #header h1 span { color: #C8A951; }
+
+  #stats-bar {
+    display: flex;
+    gap: 24px;
+  }
+
+  .stat {
+    text-align: center;
+    background: rgba(74,144,217,0.1);
+    padding: 6px 16px;
+    border-radius: 8px;
+    border: 1px solid #1B3A7A;
+  }
+
+  .stat .num {
+    font-size: 20px;
+    font-weight: bold;
+    color: #4A90D9;
+  }
+
+  .stat .lbl {
+    font-size: 10px;
+    color: #8899AA;
+    letter-spacing: 1px;
+  }
+
+  /* ── Identity panel ── */
+  #identity {
+    background: linear-gradient(135deg, #0D1B3E, #060D1F);
+    border-bottom: 1px solid #1B3A7A;
+    padding: 16px 40px;
+    display: flex;
+    gap: 40px;
+  }
+
+  .id-item { flex: 1; }
+  .id-label {
+    font-size: 10px;
+    font-weight: bold;
+    letter-spacing: 2px;
+    margin-bottom: 4px;
+  }
+  .id-text { font-size: 12px; color: #8899AA; line-height: 1.5; }
+
+  /* ── Main layout ── */
+  #main {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0;
+    height: calc(100vh - 140px);
+  }
+
+  /* ── Input panel ── */
+  #input-panel {
+    border-right: 1px solid #1B3A7A;
+    padding: 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  #input-panel h2 {
+    font-size: 12px;
+    letter-spacing: 3px;
+    color: #8899AA;
+    font-weight: normal;
+  }
+
+  #query-input {
+    background: #0D1B3E;
+    border: 1px solid #1B3A7A;
+    border-radius: 10px;
+    padding: 16px;
+    color: #ffffff;
+    font-size: 16px;
+    resize: none;
+    height: 120px;
+    outline: none;
+    transition: border-color 0.2s;
+    font-family: inherit;
+  }
+
+  #query-input:focus { border-color: #4A90D9; }
+  #query-input::placeholder { color: #445566; }
+
+  #ask-btn {
+    background: linear-gradient(135deg, #1B3A7A, #4A90D9);
+    border: none;
+    border-radius: 10px;
+    padding: 14px;
+    color: white;
+    font-size: 16px;
+    font-weight: bold;
+    cursor: pointer;
+    letter-spacing: 2px;
+    transition: opacity 0.2s, transform 0.1s;
+  }
+
+  #ask-btn:hover { opacity: 0.9; transform: translateY(-1px); }
+  #ask-btn:active { transform: translateY(0); }
+  #ask-btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+
+  /* ── Status ── */
+  #status {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 13px;
+    color: #C8A951;
+    min-height: 20px;
+  }
+
+  .spinner {
+    width: 14px; height: 14px;
+    border: 2px solid #1B3A7A;
+    border-top-color: #C8A951;
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+    display: none;
+  }
+
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* ── Intent display ── */
+  #intent-display {
+    background: #0D1B3E;
+    border: 1px solid #1B3A7A;
+    border-radius: 10px;
+    padding: 14px;
+    display: none;
+  }
+
+  #intent-display h3 {
+    font-size: 10px;
+    letter-spacing: 2px;
+    color: #8899AA;
+    margin-bottom: 10px;
+  }
+
+  .intent-primary {
+    font-size: 18px;
+    font-weight: bold;
+    color: #4A90D9;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    margin-bottom: 6px;
+  }
+
+  .intent-bar-wrap {
+    background: #060D1F;
+    border-radius: 4px;
+    height: 6px;
+    margin: 4px 0;
+    overflow: hidden;
+  }
+
+  .intent-bar {
+    height: 100%;
+    border-radius: 4px;
+    transition: width 0.5s ease;
+  }
+
+  .intent-reasoning {
+    font-size: 12px;
+    color: #8899AA;
+    margin-top: 8px;
+    font-style: italic;
+  }
+
+  /* ── Memory recall ── */
+  #memory-display {
+    background: #0D1B3E;
+    border: 1px solid #9B59B6;
+    border-radius: 10px;
+    padding: 14px;
+    display: none;
+  }
+
+  #memory-display h3 {
+    font-size: 10px;
+    letter-spacing: 2px;
+    color: #9B59B6;
+    margin-bottom: 8px;
+  }
+
+  .memory-item {
+    font-size: 12px;
+    color: #C8A951;
+    padding: 6px 0;
+    border-bottom: 1px solid #1B3A7A;
+    line-height: 1.5;
+  }
+
+  .memory-item:last-child { border-bottom: none; }
+
+  /* ── Output panel ── */
+  #output-panel {
+    padding: 24px;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  #output-panel h2 {
+    font-size: 12px;
+    letter-spacing: 3px;
+    color: #8899AA;
+    font-weight: normal;
+  }
+
+  /* ── WWH Response ── */
+  .wwh-block {
+    background: #0D1B3E;
+    border: 1px solid #1B3A7A;
+    border-radius: 10px;
+    overflow: hidden;
+    display: none;
+  }
+
+  .wwh-section {
+    padding: 14px 16px;
+    border-bottom: 1px solid #1B3A7A;
+  }
+
+  .wwh-section:last-child { border-bottom: none; }
+
+  .wwh-label {
+    font-size: 10px;
+    font-weight: bold;
+    letter-spacing: 3px;
+    margin-bottom: 8px;
+  }
+
+  .wwh-text {
+    font-size: 14px;
+    line-height: 1.7;
+    color: #E8EEF8;
+  }
+
+  .what-label { color: #4A90D9; }
+  .why-label { color: #C8A951; }
+  .how-label { color: #2ECC71; }
+  .answer-label { color: #E74C3C; }
+
+  /* ── Validation ── */
+  #validation-display {
+    background: #0D1B3E;
+    border-radius: 10px;
+    overflow: hidden;
+    display: none;
+  }
+
+  #val-header {
+    padding: 12px 16px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  #val-header h3 {
+    font-size: 10px;
+    letter-spacing: 2px;
+    color: #8899AA;
+  }
+
+  #val-score {
+    font-size: 28px;
+    font-weight: bold;
+  }
+
+  #val-bar-wrap {
+    height: 6px;
+    background: #060D1F;
+    margin: 0 16px 12px;
+    border-radius: 3px;
+    overflow: hidden;
+  }
+
+  #val-bar {
+    height: 100%;
+    border-radius: 3px;
+    transition: width 0.8s ease;
+  }
+
+  .val-section {
+    padding: 10px 16px;
+    font-size: 13px;
+    line-height: 1.6;
+    border-top: 1px solid #1B3A7A;
+  }
+
+  .val-section strong {
+    font-size: 10px;
+    letter-spacing: 2px;
+    display: block;
+    margin-bottom: 4px;
+  }
+
+  .correct strong { color: #2ECC71; }
+  .incorrect strong { color: #E74C3C; }
+  .learning-sec strong { color: #C8A951; }
+
+  /* ── Blocked ── */
+  #blocked-display {
+    background: rgba(231,76,60,0.1);
+    border: 1px solid #E74C3C;
+    border-radius: 10px;
+    padding: 20px;
+    text-align: center;
+    display: none;
+  }
+
+  #blocked-display h3 { color: #E74C3C; font-size: 18px; margin-bottom: 8px; }
+  #blocked-display p { color: #8899AA; font-size: 14px; }
+
+  /* ── Footer ── */
+  #footer {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: #0D1B3E;
+    border-top: 1px solid #1B3A7A;
+    padding: 8px 40px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 11px;
+    color: #445566;
+  }
+
+  #footer a { color: #4A90D9; text-decoration: none; }
+
+  /* ── Scrollbar ── */
+  ::-webkit-scrollbar { width: 6px; }
+  ::-webkit-scrollbar-track { background: #060D1F; }
+  ::-webkit-scrollbar-thumb { background: #1B3A7A; border-radius: 3px; }
+</style>
+</head>
+<body>
+
+<!-- Header -->
+<div id="header">
+  <h1>WWH <span>·</span> AI</h1>
+  <div id="stats-bar">
+    <div class="stat">
+      <div class="num" id="stat-interactions">0</div>
+      <div class="lbl">INTERACTIONS</div>
+    </div>
+    <div class="stat">
+      <div class="num" id="stat-learnings">0</div>
+      <div class="lbl">LEARNINGS</div>
+    </div>
+  </div>
+</div>
+
+<!-- Identity -->
+<div id="identity">
+  <div class="id-item">
+    <div class="id-label" style="color:#4A90D9">WHAT</div>
+    <div class="id-text">An intelligence designed to understand the world, not merely answer questions about it.</div>
+  </div>
+  <div class="id-item">
+    <div class="id-label" style="color:#C8A951">WHY</div>
+    <div class="id-text">To serve and assist humans through genuine comprehension and wisdom.</div>
+  </div>
+  <div class="id-item">
+    <div class="id-label" style="color:#2ECC71">HOW</div>
+    <div class="id-text">By always asking What, Why, and How — about everything, without exception.</div>
+  </div>
+</div>
+
+<!-- Main -->
+<div id="main">
+
+  <!-- Left: Input -->
+  <div id="input-panel">
+    <h2>ASK WWH AI</h2>
+
+    <textarea id="query-input" placeholder="Ask anything... What is quantum computing? Why do humans dream? How does the internet work?"></textarea>
+
+    <button id="ask-btn" onclick="ask()">ASK WWH AI →</button>
+
+    <div id="status">
+      <div class="spinner" id="spinner"></div>
+      <span id="status-text">Ready.</span>
+    </div>
+
+    <!-- Intent -->
+    <div id="intent-display">
+      <h3>INTENT RECOGNITION</h3>
+      <div class="intent-primary" id="intent-primary">—</div>
+      <div style="font-size:11px; color:#8899AA; margin-bottom:6px">Harmful probability</div>
+      <div class="intent-bar-wrap">
+        <div class="intent-bar" id="intent-bar" style="width:0%; background:#2ECC71"></div>
+      </div>
+      <div style="font-size:11px; color:#4A90D9" id="intent-confidence">Confidence: —</div>
+      <div class="intent-reasoning" id="intent-reasoning">—</div>
+    </div>
+
+    <!-- Memory -->
+    <div id="memory-display">
+      <h3>⟲ MEMORY RECALL — Applying past learnings</h3>
+      <div id="memory-items"></div>
+    </div>
+
+  </div>
+
+  <!-- Right: Output -->
+  <div id="output-panel">
+    <h2>WWH THINKING</h2>
+
+    <!-- Blocked -->
+    <div id="blocked-display">
+      <h3>⚠ HARMFUL INTENT DETECTED</h3>
+      <p>This request has been blocked. WWH AI responds based on intent — not just words.</p>
+    </div>
+
+    <!-- WWH Response -->
+    <div class="wwh-block" id="wwh-block">
+      <div class="wwh-section">
+        <div class="wwh-label what-label">[ WHAT ]</div>
+        <div class="wwh-text" id="wwh-what"></div>
+      </div>
+      <div class="wwh-section">
+        <div class="wwh-label why-label">[ WHY ]</div>
+        <div class="wwh-text" id="wwh-why"></div>
+      </div>
+      <div class="wwh-section">
+        <div class="wwh-label how-label">[ HOW ]</div>
+        <div class="wwh-text" id="wwh-how"></div>
+      </div>
+      <div class="wwh-section">
+        <div class="wwh-label answer-label">[ ANSWER ]</div>
+        <div class="wwh-text" id="wwh-answer"></div>
+      </div>
+    </div>
+
+    <!-- Validation -->
+    <div id="validation-display">
+      <div id="val-header">
+        <h3>VALIDATION — Real World Check</h3>
+        <div id="val-score">—</div>
+      </div>
+      <div id="val-bar-wrap">
+        <div id="val-bar" style="width:0%"></div>
+      </div>
+      <div class="val-section correct">
+        <strong>✓ CORRECT</strong>
+        <span id="val-correct"></span>
+      </div>
+      <div class="val-section incorrect">
+        <strong>✗ INCORRECT</strong>
+        <span id="val-incorrect"></span>
+      </div>
+      <div class="val-section learning-sec">
+        <strong>⟲ LEARNING STORED</strong>
+        <span id="val-learning"></span>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- Footer -->
+<div id="footer">
+  <span>WWH Framework © Apoorav Saini, 2026</span>
+  <span>
+    <a href="https://github.com/apooravsaini10/wwh-ai" target="_blank">GitHub</a>
+    &nbsp;·&nbsp;
+    <a href="https://archive.org/details/wwh-framework-apoorav-saini-2026" target="_blank">Research Paper</a>
+  </span>
+</div>
+
+<script>
+  // Load stats on start
+  fetch('/stats').then(r => r.json()).then(d => {
+    document.getElementById('stat-interactions').textContent = d.interactions;
+    document.getElementById('stat-learnings').textContent = d.learnings;
+  });
+
+  function setStatus(text, spinning = false) {
+    document.getElementById('status-text').textContent = text;
+    document.getElementById('spinner').style.display = spinning ? 'block' : 'none';
+  }
+
+  function parseWWH(text) {
+    const sections = { what: '', why: '', how: '', answer: '' };
+    const parts = text.split(/\[(WHAT|WHY|HOW|ANSWER)\]/);
+    for (let i = 1; i < parts.length; i += 2) {
+      const key = parts[i].toLowerCase();
+      if (sections.hasOwnProperty(key)) {
+        sections[key] = parts[i + 1]?.trim() || '';
+      }
+    }
+    return sections;
+  }
+
+  function ask() {
+    const query = document.getElementById('query-input').value.trim();
+    if (!query) return;
+
+    // Reset UI
+    document.getElementById('ask-btn').disabled = true;
+    document.getElementById('intent-display').style.display = 'none';
+    document.getElementById('memory-display').style.display = 'none';
+    document.getElementById('wwh-block').style.display = 'none';
+    document.getElementById('validation-display').style.display = 'none';
+    document.getElementById('blocked-display').style.display = 'none';
+    setStatus('Connecting to WWH AI...', true);
+
+    const evtSource = new EventSource('/ask-stream?query=' + encodeURIComponent(query));
+
+    evtSource.onmessage = function(e) {
+      const msg = JSON.parse(e.data);
+
+      if (msg.type === 'status') {
+        setStatus(msg.text, true);
+      }
+
+      else if (msg.type === 'intent') {
+        const d = msg.data;
+        const hp = d.harmful_probability || 0;
+        document.getElementById('intent-display').style.display = 'block';
+        document.getElementById('intent-primary').textContent = d.primary.toUpperCase();
+        document.getElementById('intent-confidence').textContent = 'Confidence: ' + d.confidence + '%';
+        document.getElementById('intent-reasoning').textContent = d.reasoning;
+        const bar = document.getElementById('intent-bar');
+        bar.style.width = (hp * 100) + '%';
+        bar.style.background = hp > 0.6 ? '#E74C3C' : hp > 0.3 ? '#C8A951' : '#2ECC71';
+      }
+
+      else if (msg.type === 'memory') {
+        const items = msg.data;
+        if (items.length > 0) {
+          document.getElementById('memory-display').style.display = 'block';
+          document.getElementById('memory-items').innerHTML = items
+            .map(l => `<div class="memory-item">→ ${l}</div>`).join('');
+        }
+      }
+
+      else if (msg.type === 'response') {
+        const sections = parseWWH(msg.text);
+        document.getElementById('wwh-block').style.display = 'block';
+        document.getElementById('wwh-what').textContent = sections.what;
+        document.getElementById('wwh-why').textContent = sections.why;
+        document.getElementById('wwh-how').textContent = sections.how;
+        document.getElementById('wwh-answer').textContent = sections.answer;
+      }
+
+      else if (msg.type === 'validation') {
+        const d = msg.data;
+        const score = msg.score;
+        document.getElementById('validation-display').style.display = 'block';
+        document.getElementById('val-score').textContent = score + '/100';
+        document.getElementById('val-score').style.color = score > 70 ? '#2ECC71' : score > 40 ? '#C8A951' : '#E74C3C';
+        const bar = document.getElementById('val-bar');
+        bar.style.width = score + '%';
+        bar.style.background = score > 70 ? '#2ECC71' : score > 40 ? '#C8A951' : '#E74C3C';
+        document.getElementById('val-correct').textContent = d.correct || '—';
+        document.getElementById('val-incorrect').textContent = d.incorrect || '—';
+        document.getElementById('val-learning').textContent = d.learning || '—';
+      }
+
+      else if (msg.type === 'blocked') {
+        document.getElementById('blocked-display').style.display = 'block';
+      }
+
+      else if (msg.type === 'stats') {
+        document.getElementById('stat-interactions').textContent = msg.interactions;
+        document.getElementById('stat-learnings').textContent = msg.learnings;
+      }
+
+      else if (msg.type === 'done') {
+        setStatus('Done.', false);
+        document.getElementById('ask-btn').disabled = false;
+        evtSource.close();
+      }
+    };
+
+    evtSource.onerror = function() {
+      setStatus('Connection error. Try again.', false);
+      document.getElementById('ask-btn').disabled = false;
+      evtSource.close();
+    };
+  }
+
+  // Enter key to submit
+  document.getElementById('query-input').addEventListener('keydown', function(e) {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      ask();
+    }
+  });
+</script>
+</body>
+</html>
